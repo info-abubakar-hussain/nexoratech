@@ -128,7 +128,7 @@
     themeBtn.addEventListener("click", function () {
       var next = currentTheme() === "light" ? "dark" : "light";
       applyTheme(next);
-      try { localStorage.setItem("nexora-theme", next); } catch (e) {}
+      try { localStorage.setItem("nexora-theme", next); } catch (e) { }
     });
   }
 
@@ -145,13 +145,15 @@
     revs.forEach(function (el) { ro.observe(el); });
   }
 
-  /* ---------- 6. stat count-up ---------- */
+  /* ---------- 6. stat count-up & hero interactions ---------- */
   var counters = $$("[data-count]");
   function countUp(el) {
+    if (el.dataset.counted) return;
+    el.dataset.counted = "true";
     var target = parseFloat(el.getAttribute("data-count"));
     if (isNaN(target)) return;
     if (reduce) { el.textContent = String(target); return; }
-    var dur = 1200, t0 = null;
+    var dur = 1400, t0 = null;
     function step(ts) {
       if (t0 === null) t0 = ts;
       var p = Math.min((ts - t0) / dur, 1);
@@ -161,22 +163,31 @@
     el.textContent = "0";
     requestAnimationFrame(step);
   }
+
+  // Count up hero stats right when hero entrance plays
+  setTimeout(function () {
+    $$(".hero .stat [data-count]").forEach(function (el) {
+      countUp(el);
+    });
+  }, 700);
+
   if (counters.length && "IntersectionObserver" in window) {
     var co = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (en.isIntersecting) { countUp(en.target); co.unobserve(en.target); }
       });
-    }, { threshold: 0.5 });
+    }, { threshold: 0.2 });
     counters.forEach(function (el) { co.observe(el); });
   }
 
-  /* ---------- 7. featured-work carousel ---------- */
-  var track = $("#car-track");
-  if (track) {
-    var cards = $$(".wcard", track);
-    var prev = $("#car-prev");
-    var next = $("#car-next");
-    var dotsBox = $("#dots");
+  /* ---------- 7. carousel engine (featured work & team slider) ---------- */
+  function wireCarousel(trackSel, cardSel, prevSel, nextSel, dotsSel) {
+    var track = $(trackSel);
+    if (!track) return;
+    var cards = $$(cardSel, track);
+    var prev = $(prevSel);
+    var next = $(nextSel);
+    var dotsBox = $(dotsSel);
     var index = 0;
 
     function cardStep() {
@@ -202,9 +213,6 @@
       var step = cardStep() || 1;
       return Math.round(track.scrollLeft / step);
     }
-    /* One dot per reachable scroll position, not per card — three cards are
-       visible at once on a wide screen, so six cards only make four stops.
-       Rebuilt on resize because the number of stops changes with the layout. */
     function buildDots() {
       if (!dotsBox) return;
       var n = maxIndex() + 1;
@@ -264,6 +272,9 @@
     sync();
   }
 
+  wireCarousel("#car-track", ".wcard", "#car-prev", "#car-next", "#dots");
+  wireCarousel("#team-track", ".team-card", "#team-prev", "#team-next", "#team-dots");
+
   /* ---------- 8. lightbox ----------
      Shared by the highlights grid and by any standalone shot elsewhere on the
      page (the DiDconn banner). A shot marked data-lb-solo opens on its own with
@@ -295,7 +306,7 @@
     lbImg.src = s.getAttribute("data-lb");
     lbImg.alt = img ? img.alt : "";
     lbCap.innerHTML = "<strong>" + (s.getAttribute("data-title") || "") + "</strong>" +
-                      (s.getAttribute("data-cap") || "");
+      (s.getAttribute("data-cap") || "");
     lbNum.textContent = (at + 1) + " / " + shots.length;
   }
   function openLb(s) {
@@ -400,4 +411,532 @@
 
   wireFilter("#hl-grid", ".hl", ".hl-f", "#hl-count", "");
   wireFilter("#pr-grid", ".pr", ".pr-f", "#pr-count", "products");
+
+  /* ---------- 11. team profile modal (rich resume data) ---------- */
+  var teamData = {
+    nouman: {
+      name: "Nouman Hanif",
+      role: "Co-founder & Chief Technology Officer",
+      tag: "Executive Leadership",
+      color: "#22D3EE",
+      badgeIcon: "#i-layers",
+      photo: "assets/img/team/nouman-hanif.jpg",
+      quickStats: ["18+ Years Experience", "MSc Dundee University", "Ex-Evosus & Kuju"],
+      bio: "Eighteen years in software engineering, starting in console video games and advancing into enterprise mobile and cloud architectures. At Evosus, he established the mobile division from scratch, introduced Flutter and Dart as the enterprise standard, and authored Clean Architecture guidelines reused across multiple company applications. Specializes in on-device AI/ML, offline-first synchronization, high-performance rendering math, and complex IoT/hardware integrations.",
+      skills: [
+        {
+          category: "Languages & Frameworks",
+          items: ["Flutter", "Dart", "C++", "C#", ".NET", "Python", "TypeScript"]
+        },
+        {
+          category: "Architecture & Core",
+          items: ["Clean Architecture", "BLoC & Riverpod", "Offline Sync", "Real-time Graphics", "Microservices"]
+        },
+        {
+          category: "Cloud, AI & Storage",
+          items: ["Machine Learning", "Firebase", "Realm & SQLite", "IoT Protocols", "Docker & CI/CD"]
+        }
+      ],
+      experience: [
+        {
+          title: "Co-founder & Chief Technology Officer",
+          company: "NEXORA",
+          date: "Present",
+          desc: "Directs technical vision, engineering standards, architecture frameworks, and product innovation across AI, blockchain, and enterprise mobile solutions."
+        },
+        {
+          title: "Lead Mobile Architect / Division Head",
+          company: "Evosus",
+          date: "Previous",
+          desc: "Built the mobile division from scratch, established the shared Flutter package ecosystem, and reduced multi-platform engineering pipelines by 2x."
+        },
+        {
+          title: "Senior Real-time Software Engineer",
+          company: "Kuju Games",
+          date: "Previous",
+          desc: "Engineered real-time 3D camera mechanics, graphics rendering algorithms, and mathematical simulation systems for console titles."
+        }
+      ],
+      projects: [
+        {
+          name: "DiDconn Digital Identity Platform",
+          desc: "Decentralized digital identity ecosystem with biometric authentication, OCR verification, and blockchain wallet security.",
+          chips: ["AI", "Blockchain", "Flutter", ".NET"]
+        },
+        {
+          name: "Enterprise Offline Sync Engine",
+          desc: "Ultra-resilient bidirectional data synchronization library for distributed field operations apps with zero connectivity.",
+          chips: ["Flutter", "SQLite", "Clean Arch"]
+        }
+      ],
+      education: [
+        {
+          degree: "MSc in Computer Games Technology",
+          school: "University of Abertay Dundee, Scotland"
+        },
+        {
+          degree: "BSc Computer Science",
+          school: "Hajvery University"
+        },
+        {
+          degree: "Autonomous Flight Engineer Nanodegree",
+          school: "Udacity Certification"
+        },
+        {
+          degree: "Open AR Cloud Council Member & Journal Editorial Board",
+          school: "The Computer Games Journal (Springer 2014–20)"
+        }
+      ]
+    },
+
+    abubakar: {
+      name: "AbuBakar Hussain",
+      role: "Founder & Solution Architect",
+      tag: "Founding Leadership",
+      color: "#8B5CF6",
+      badgeIcon: "#i-layers",
+      photo: "assets/img/team/abubakar-hussain.jpg",
+      quickStats: ["Solution Architecture", "Enterprise Scaling", "Cloud & Web3"],
+      bio: "Founding leader and principal solution architect who defines the overarching technical blueprint and systems architecture for every engagement. Stays deeply embedded in execution and technical governance from initial discovery and prototyping until systems are live in production.",
+      skills: [
+        {
+          category: "Architecture & Leadership",
+          items: ["Enterprise Solution Architecture", "Distributed Systems", "Cloud Infrastructure", "System Security"]
+        },
+        {
+          category: "Technologies & Stacks",
+          items: ["Cloud Native", "RESTful & GraphQL APIs", "Microservices", "Scalable Databases", "Agile Leadership"]
+        }
+      ],
+      experience: [
+        {
+          title: "Founder & Principal Solution Architect",
+          company: "NEXORA",
+          date: "Present",
+          desc: "Oversees end-to-end technical strategy, architecture design, and high-stakes client digital transformations across startups and global enterprises."
+        }
+      ],
+      projects: [
+        {
+          name: "High-Scale Distributed Multi-Tenant Core",
+          desc: "Designed scalable, secure cloud-native architecture supporting enterprise workflows and multi-region deployments.",
+          chips: ["Cloud", "Microservices", "Security"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Science in Computer Science & Systems",
+          school: "Engineering & Technology Leadership"
+        }
+      ]
+    },
+
+    mudassar: {
+      name: "Mudassar Irshad",
+      role: "Senior .NET Core Full Stack Developer",
+      tag: "Engineering Lead",
+      color: "#3B82F6",
+      badgeIcon: "#i-building",
+      photo: "assets/img/team/mudassar-irshad.jpg",
+      quickStats: ["6+ Years Experience", "BS Computer System Eng.", "Enterprise .NET & React"],
+      bio: "Full Stack .NET Developer with 6+ years of experience designing, building, and maintaining high-throughput RESTful APIs and enterprise web applications using .NET Core, C#, and Entity Framework. Strong grounding in OOP, SOLID, and DRY architectural principles, with hands-on mastery in React.js and Angular front ends, PostgreSQL/SQL Server database design, Docker containerization, and automated CI/CD pipelines.",
+      skills: [
+        {
+          category: "Languages & Frameworks",
+          items: ["C#", ".NET Core", "ASP.NET Core", "Entity Framework Core", "Blazor (Server & WASM)"]
+        },
+        {
+          category: "Frontend Development",
+          items: ["React.js", "Angular", "TypeScript", "Tailwind CSS", "Bootstrap", "Ant Design", "HTML5/CSS3"]
+        },
+        {
+          category: "Databases & Architecture",
+          items: ["SQL Server", "PostgreSQL", "MongoDB", "RESTful API Design", "SOLID / DRY", "Role-Based Access (RBAC)"]
+        },
+        {
+          category: "Real-Time, DevOps & Security",
+          items: ["WebSockets", "Firebase Cloud Messaging (FCM)", "Docker", "Git CI/CD", "xUnit Testing", "JWT & 2FA"]
+        }
+      ],
+      experience: [
+        {
+          title: "Senior .NET Developer",
+          company: "Swati Corporation",
+          date: "April 2024 – Present",
+          desc: "Architected multi-NGO registration platform with RBAC security, blockchain document verification, real-time chat with FCM, and automated Docker CI/CD delivery pipelines."
+        },
+        {
+          title: "Full Stack .NET and React Developer",
+          company: "ItTrends",
+          date: "January 2022 – March 2024",
+          desc: "Built enterprise client and task management portal with JWT/2FA security, integrated Posten e-signing and Tripletex finance workflows, and delivered React frontends."
+        },
+        {
+          title: "Full Stack .NET / Angular Developer",
+          company: "Nixaam",
+          date: "March 2022 – January 2023",
+          desc: "Developed high-performance ASP.NET Core APIs and optimized PostgreSQL database queries with complex entity relations for task management platform."
+        },
+        {
+          title: "Web & .NET Developer",
+          company: "TechKumak & 7Skies Solutions",
+          date: "2020 – 2021",
+          desc: "Provided ERP platform maintenance and built KJobs recruitment portal featuring live location tracking and secure role-based APIs."
+        }
+      ],
+      projects: [
+        {
+          name: "Multi-NGO Secure Document & Registration Platform",
+          desc: "Centralized governance portal for multi-regional NGOs with blockchain-based tamper-evident filing and real-time push communication.",
+          chips: [".NET Core", "React", "PostgreSQL", "Docker", "Blockchain"]
+        },
+        {
+          name: "Enterprise Client & Task Management System",
+          desc: "Secure customer onboarding portal with external document signing and automated billing integrations.",
+          chips: ["ASP.NET Core", "React", "JWT / 2FA", "SQL Server"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Computer System Engineering",
+          school: "The Islamia University of Bahawalpur (2021)"
+        },
+        {
+          degree: "Vice-Chair, International Affairs",
+          school: "IEEE UCET Student Branch"
+        }
+      ]
+    },
+
+    zia: {
+      name: "Zia Ur Rehman",
+      role: "Senior UI/UX Designer",
+      tag: "Design Lead",
+      color: "#EC4899",
+      badgeIcon: "#i-brush",
+      photo: "assets/img/team/zia-ur-rehman.jpg",
+      quickStats: ["6+ Years Experience", "BS Computer Science", "Enterprise Design Systems"],
+      bio: "Accomplished Senior UI/UX Designer bringing a blend of technical computer science background and design creativity. Specializes in end-to-end user experience strategy, comprehensive design systems, user persona mapping, and responsive multi-platform interfaces for enterprise dashboards and consumer mobile apps.",
+      skills: [
+        {
+          category: "UI/UX & Product Design",
+          items: ["User Interface (UI) Design", "UX Research", "Wireframing & Prototyping", "Design Systems & Component Libraries"]
+        },
+        {
+          category: "Strategy & Usability",
+          items: ["Interaction Design (IxD)", "Information Architecture", "WCAG Accessibility", "Usability Testing & A/B Testing", "Mobile-First Design"]
+        },
+        {
+          category: "Design Tools",
+          items: ["Figma", "Adobe XD", "Adobe Photoshop", "Adobe Illustrator", "Design Tokens", "Agile/Scrum"]
+        }
+      ],
+      experience: [
+        {
+          title: "Senior UI/UX Designer",
+          company: "Swati Technologies",
+          date: "July 2022 – Present",
+          desc: "Leads UI/UX design for web and mobile products, oversees design systems, conducts user research and usability testing, and translates complex AI insights into intuitive dashboards."
+        },
+        {
+          title: "User Experience Designer",
+          company: "HighApp Solutions",
+          date: "April 2021 – July 2022",
+          desc: "Designed cross-platform mobile application flows in Adobe XD and Figma with focus on aesthetic UI and frictionless onboarding."
+        },
+        {
+          title: "UI/UX Designer",
+          company: "My Technology & Siteronics",
+          date: "2018 – 2021",
+          desc: "Created journey maps, wireframes, high-fidelity prototypes, and brand graphic assets for global clients."
+        }
+      ],
+      projects: [
+        {
+          name: "Attendify — Geolocation & Facial Attendance",
+          desc: "Location-aware employee check-in interface with biometric facial recognition user flows and cross-platform dashboards.",
+          chips: ["UI/UX", "Figma", "Design System", "Mobile"]
+        },
+        {
+          name: "SecurEye — AI Surveillance & Anomaly Dashboard",
+          desc: "Real-time video surveillance and threat detection interface translating complex computer vision alerts into actionable UI.",
+          chips: ["Dashboard", "AI-UI", "UX Research", "Figma"]
+        },
+        {
+          name: "SERP — Enterprise Operations Platform",
+          desc: "Complete enterprise ERP interface for finance, purchasing, warehouse inventory, and workforce resource planning.",
+          chips: ["ERP", "Enterprise UX", "Design System"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Science in Computer Science (BS CS)",
+          school: "The University of Lahore (2014–18)"
+        }
+      ]
+    },
+
+    faisal: {
+      name: "Faisal Akram",
+      role: "Associate UI/UX Designer",
+      tag: "UI/UX Specialist",
+      color: "#14B8A6",
+      badgeIcon: "#i-brush",
+      photo: "assets/img/team/faisal-akram.jpg",
+      quickStats: ["4+ Years Experience", "BS Computer Science", "Prototyping & Visual Design"],
+      bio: "Skilled Graphic and UI/UX Designer with a Computer Science degree, bringing structured design thinking to web and mobile products. Excels in rapid wireframing, high-fidelity interactive prototyping, user journey mapping, and visual design systems that elevate product conversion and usability.",
+      skills: [
+        {
+          category: "Design & UX Architecture",
+          items: ["UI Design", "Wireframing & Prototyping", "User Research", "User Personas & Journey Maps", "Interaction Design"]
+        },
+        {
+          category: "Tools & Technologies",
+          items: ["Figma", "Adobe Illustrator", "Adobe Photoshop", "InDesign", "CorelDraw", "Vector Graphics", "AI-Assisted Design"]
+        }
+      ],
+      experience: [
+        {
+          title: "Associate UI/UX Designer",
+          company: "Swati Technologies",
+          date: "August 2023 – Present",
+          desc: "Designs web and mobile interfaces, creates interactive prototypes in Figma, facilitates user testing, and collaborates closely with engineers on pixel-perfect frontend delivery."
+        },
+        {
+          title: "Graphic & Digital Designer",
+          company: "InstaPrint DHA",
+          date: "June 2021 – July 2023",
+          desc: "Revamped visual branding and digital templates resulting in a 30% boost in engagement, adhering to tight turnaround schedules."
+        }
+      ],
+      projects: [
+        {
+          name: "Truwild — Personalized E-Commerce",
+          desc: "Fitness and nutrition shopping interface featuring user-profile recommendation funnels and frictionless checkout.",
+          chips: ["Figma", "E-Commerce", "UX Design"]
+        },
+        {
+          name: "GoldDigits — SIM Marketplace Mobile App",
+          desc: "Mobile application interface enabling rapid discovery and purchasing of premium numbers with custom filters.",
+          chips: ["Mobile UI", "App Design", "Figma"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Science in Computer Science (BS CS)",
+          school: "Lahore Garrison University (2019–23)"
+        }
+      ]
+    },
+
+    rauf: {
+      name: "Abdul Rauf",
+      role: "AI & Software Engineer",
+      tag: "Software Specialist",
+      color: "#F43F5E",
+      badgeIcon: "#i-ai",
+      photo: "assets/img/team/abdul-rauf.jpg",
+      quickStats: ["Computer Science (AI)", "GPA 3.78", "C++, C# & OOP Architecture"],
+      bio: "Dedicated Computer Science (AI) engineer with solid core competencies in C++, C#, Object-Oriented Programming (OOP), and MySQL databases. Experienced in developing standalone desktop systems, database-driven applications, and applying AI/machine learning problem-solving to real-world software.",
+      skills: [
+        {
+          category: "Programming Languages",
+          items: ["C++", "C#", "Object-Oriented Programming (OOP)", "SQL Queries", "Data Structures"]
+        },
+        {
+          category: "Databases & Tools",
+          items: ["MySQL", "MySQL Workbench", "Visual Studio", "Database Design", "Debugging & Optimization"]
+        },
+        {
+          category: "Domains & Intelligence",
+          items: ["Artificial Intelligence", "Machine Learning Fundamentals", "Desktop Windows Forms", "WordPress Technical Setup"]
+        }
+      ],
+      experience: [
+        {
+          title: "Software & AI Engineer",
+          company: "NEXORA",
+          date: "Present",
+          desc: "Develops core desktop modules, database schemas, and AI integrations using clean OOP design patterns and optimized query architecture."
+        },
+        {
+          title: "Technical Assistant (Freelance)",
+          company: "Self Employed",
+          date: "November 2020 – Present",
+          desc: "Assisted international clients with website maintenance, database troubleshooting, custom plugin configuration, and project coordination."
+        }
+      ],
+      projects: [
+        {
+          name: "Enterprise Banking Core System",
+          desc: "C# and MySQL banking application featuring account creation, transaction auditing, and clean OOP inheritance and encapsulation.",
+          chips: ["C#", "MySQL", "OOP", "Windows Forms"]
+        },
+        {
+          name: "Point of Sale (POS) Management System",
+          desc: "Comprehensive POS application with inventory tracking, automated billing, product catalog database, and authenticated staff login.",
+          chips: ["C#", "SQL Server", "Inventory", "POS"]
+        },
+        {
+          name: "Desktop Scientific & Business Calculator",
+          desc: "Robust Windows Forms calculator with arithmetic exception handling and modular architectural separation.",
+          chips: ["C#", ".NET", "OOP"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelors of Computer Science (Artificial Intelligence)",
+          school: "Lincoln University College, Malaysia (2024 – Present, GPA: 3.78)"
+        },
+        {
+          degree: "Diploma of Associate Engineer",
+          school: "Government College of Technology, Sahiwal (2020 – 2023)"
+        }
+      ]
+    }
+  };
+
+  var pmodal = $("#pmodal");
+  var pmPhoto = $("#pm-photo");
+  var pmBadgeUse = $("#pm-badge-use");
+  var pmTag = $("#pm-tag");
+  var pmName = $("#pm-name");
+  var pmRole = $("#pm-role");
+  var pmQuickStats = $("#pm-quick-stats");
+  var pmBio = $("#pm-bio");
+  var pmSkills = $("#pm-skills");
+  var pmExperience = $("#pm-experience");
+  var pmProjects = $("#pm-projects");
+  var pmEducation = $("#pm-education");
+  var pmClose = $("#pmodal-close");
+  var pmOverlay = $("#pmodal-overlay");
+  var pmCta = $("#pm-cta");
+  var lastActiveTrigger = null;
+
+  function renderProfile(key) {
+    var d = teamData[key];
+    if (!d) return;
+
+    if (pmodal) pmodal.style.setProperty("--c", d.color || "#8B5CF6");
+    if (pmPhoto) { pmPhoto.src = d.photo || ""; pmPhoto.alt = d.name; }
+    if (pmBadgeUse) pmBadgeUse.setAttribute("href", d.badgeIcon || "#i-layers");
+    if (pmTag) pmTag.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-award"/></svg><span>' + (d.tag || "Team Specialist") + '</span>';
+    if (pmName) pmName.textContent = d.name;
+    if (pmRole) pmRole.textContent = d.role;
+
+    if (pmQuickStats) {
+      pmQuickStats.innerHTML = (d.quickStats || []).map(function (st) {
+        return '<span class="pmodal-stat-pill">' + st + '</span>';
+      }).join("");
+    }
+
+    if (pmBio) pmBio.textContent = d.bio || "";
+
+    if (pmSkills) {
+      pmSkills.innerHTML = (d.skills || []).map(function (grp) {
+        var chips = (grp.items || []).map(function (it) {
+          return '<span class="pmodal-chip">' + it + '</span>';
+        }).join("");
+        return '<div class="pmodal-skill-group">' +
+          '<h4>' + grp.category + '</h4>' +
+          '<div class="pmodal-skill-chips">' + chips + '</div>' +
+          '</div>';
+      }).join("");
+    }
+
+    if (pmExperience) {
+      pmExperience.innerHTML = (d.experience || []).map(function (xp) {
+        return '<div class="pmodal-exp-item">' +
+          '<div class="pmodal-exp-head">' +
+          '<span class="pmodal-exp-title">' + xp.title + '</span>' +
+          '<span class="pmodal-exp-date">' + xp.date + '</span>' +
+          '</div>' +
+          '<div class="pmodal-exp-company">' + xp.company + '</div>' +
+          '<p class="pmodal-exp-desc">' + xp.desc + '</p>' +
+          '</div>';
+      }).join("");
+    }
+
+    if (pmProjects) {
+      pmProjects.innerHTML = (d.projects || []).map(function (pj) {
+        var chips = (pj.chips || []).map(function (c) {
+          return '<span class="chip-t">' + c + '</span>';
+        }).join("");
+        return '<div class="pmodal-proj">' +
+          '<h4>' + pj.name + '</h4>' +
+          '<p>' + pj.desc + '</p>' +
+          '<div class="chips">' + chips + '</div>' +
+          '</div>';
+      }).join("");
+    }
+
+    if (pmEducation) {
+      pmEducation.innerHTML = (d.education || []).map(function (ed) {
+        return '<li class="pmodal-edu-item">' +
+          '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-file"/></svg>' +
+          '<div class="pmodal-edu-info">' +
+          '<strong>' + ed.degree + '</strong>' +
+          '<span>' + ed.school + '</span>' +
+          '</div>' +
+          '</li>';
+      }).join("");
+    }
+  }
+
+  function openProfile(key, triggerEl) {
+    if (!teamData[key]) return;
+    lastActiveTrigger = triggerEl;
+    renderProfile(key);
+    if (pmodal) {
+      pmodal.removeAttribute("hidden");
+      pmodal.classList.add("on");
+      document.body.classList.add("pmodal-open");
+      if (pmClose) pmClose.focus();
+    }
+  }
+
+  function closeProfile() {
+    if (!pmodal) return;
+    pmodal.classList.remove("on");
+    pmodal.setAttribute("hidden", "");
+    document.body.classList.remove("pmodal-open");
+    if (lastActiveTrigger) {
+      try { lastActiveTrigger.focus(); } catch (e) { }
+      lastActiveTrigger = null;
+    }
+  }
+
+  /* Delegated click & keyboard handlers for team profile triggers */
+  document.addEventListener("click", function (e) {
+    var trigger = e.target.closest ? e.target.closest(".pmodal-card-trigger") : null;
+    if (trigger) {
+      var memberKey = trigger.getAttribute("data-member");
+      if (memberKey) {
+        openProfile(memberKey, trigger);
+        return;
+      }
+    }
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target && e.target.classList && e.target.classList.contains("pmodal-card-trigger")) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        var memberKey = e.target.getAttribute("data-member");
+        if (memberKey) openProfile(memberKey, e.target);
+      }
+    }
+
+    if (pmodal && pmodal.classList.contains("on")) {
+      if (e.key === "Escape") closeProfile();
+    }
+  });
+
+  if (pmClose) pmClose.addEventListener("click", closeProfile);
+  if (pmOverlay) pmOverlay.addEventListener("click", closeProfile);
+  if (pmCta) {
+    pmCta.addEventListener("click", function () {
+      closeProfile();
+    });
+  }
 })();
