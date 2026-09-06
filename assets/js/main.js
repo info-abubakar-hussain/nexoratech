@@ -939,4 +939,30 @@
       closeProfile();
     });
   }
+
+  /* ---------- 12. project brief — opens a prefilled mailto ---------- */
+  var brief = $("#brief");
+  var briefOk = $("#brief-ok");
+  if (brief) {
+    brief.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = ($("#brief-name") || {}).value || "";
+      var email = ($("#brief-email") || {}).value || "";
+      var company = ($("#brief-company") || {}).value || "";
+      var need = ($("#brief-need") || {}).value || "";
+      var message = ($("#brief-message") || {}).value || "";
+      var body = [
+        "Name: " + name,
+        "Email: " + email,
+        "Company: " + company,
+        "Need: " + need,
+        "",
+        message
+      ].join("\n");
+      window.location.href = "mailto:hello@nexora.com?subject=" +
+        encodeURIComponent("Project brief — " + (need || "NEXORA")) +
+        "&body=" + encodeURIComponent(body);
+      if (briefOk) briefOk.removeAttribute("hidden");
+    });
+  }
 })();
