@@ -1,5 +1,5 @@
 /* =============================================================
-   NEXORA — interactions
+   CodemityTech — interactions
    Vanilla JS, no dependencies. Everything degrades gracefully:
    with JS off you still get the full page, just without the
    carousel arrows, theme switch and count-up.
@@ -128,7 +128,7 @@
     themeBtn.addEventListener("click", function () {
       var next = currentTheme() === "light" ? "dark" : "light";
       applyTheme(next);
-      try { localStorage.setItem("nexora-theme", next); } catch (e) { }
+      try { localStorage.setItem("codemity-theme", next); } catch (e) { }
     });
   }
 
@@ -440,7 +440,7 @@
       experience: [
         {
           title: "Co-founder & Chief Technology Officer",
-          company: "NEXORA",
+          company: "CodemityTech",
           date: "Present",
           desc: "Directs technical vision, engineering standards, architecture frameworks, and product innovation across AI, blockchain, and enterprise mobile solutions."
         },
@@ -511,7 +511,7 @@
       experience: [
         {
           title: "Founder & Principal Solution Architect",
-          company: "NEXORA",
+          company: "CodemityTech",
           date: "Present",
           desc: "Oversees end-to-end technical strategy, architecture design, and high-stakes client digital transformations across startups and global enterprises."
         }
@@ -755,7 +755,7 @@
       experience: [
         {
           title: "Software & AI Engineer",
-          company: "NEXORA",
+          company: "CodemityTech",
           date: "Present",
           desc: "Develops core desktop modules, database schemas, and AI integrations using clean OOP design patterns and optimized query architecture."
         },
@@ -959,8 +959,8 @@
         "",
         message
       ].join("\n");
-      window.location.href = "mailto:hello@nexora.com?subject=" +
-        encodeURIComponent("Project brief — " + (need || "NEXORA")) +
+      window.location.href = "mailto:hello@codemitytech.com?subject=" +
+        encodeURIComponent("Project brief — " + (need || "CodemityTech")) +
         "&body=" + encodeURIComponent(body);
       if (briefOk) briefOk.removeAttribute("hidden");
     });
