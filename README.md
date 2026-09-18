@@ -1,4 +1,4 @@
-# NEXORA — homepage
+# CodemityTech — homepage
 
 A single-page marketing site built from the supplied design mock-up. Plain HTML,
 CSS and vanilla JavaScript — no build step, no npm install, no framework. Open
@@ -45,7 +45,7 @@ The page mixes two kinds of content and it matters which is which.
   the banner in `assets/img/brand/`.
 
 One deliberate exception: his title. **Co-founder & Chief Technology Officer**
-is a NEXORA role, not a CV fact — the CVs top out at "Team Lead / Senior Mobile
+is a CodemityTech role, not a CV fact — the CVs top out at "Team Lead / Senior Mobile
 Developer". That is a business decision, so it stands, but it is the one line in
 the card that a CV cannot back up.
 
@@ -69,14 +69,14 @@ invented. The same list lives in a comment at the top of `index.html`.
 
 | # | What | Where |
 |---|------|-------|
-| 1 | Brand name **NEXORA** | header, footer, `<title>`, `og:` meta, inline SVG favicon |
-| 2 | **hello@nexora.com** | CTA buttons (two `mailto:` links) and the footer contact list |
+| 1 | Brand name **CodemityTech** | header, footer, `<title>`, `og:` meta, inline SVG favicon |
+| 2 | **hello@codemitytech.com** | CTA buttons (two `mailto:` links) and the footer contact list |
 | 3 | **+966 50 XXX.XXXX** | footer contact list — kept as plain text, not a `tel:` link, because it is not a real number. The floating WhatsApp button points at `#cta` for the same reason; swap it for `https://wa.me/<full number>` |
 | 4 | **Riyadh, Saudi Arabia** | footer contact list, and the dot on the little dotted world map |
 | 5 | **© 2024** | footer bottom bar |
 | 6 | Stats **100+ / 95%** | hero. Nothing in the CVs verifies these two, so they were left as-is. `8+ Countries Served` was changed to `5 Countries Delivered In` because the page contradicted itself — the leadership card below it lists the countries, and there are five. The number lives twice: in `data-count` (what the count-up animates to) and as the text inside the span (what shows with JS off). Change both |
 | 7 | Social links | four `href="#"` in the footer |
-| 8 | Client logos | the "Trusted by" row is still invented names. **Do not** move the product-section clients (Evosus, Jazz, Spacecubed, Kuju) up here — they are the CTO's former employers, not NEXORA clients, and claiming otherwise would be false. That row needs NEXORA's own clients |
+| 8 | Client logos | the "Trusted by" row is still invented names. **Do not** move the product-section clients (Evosus, Jazz, Spacecubed, Kuju) up here — they are the CTO's former employers, not CodemityTech clients, and claiming otherwise would be false. That row needs CodemityTech's own clients |
 | 9 | **5.0 · (40+ Reviews)** | CTA band |
 | 10 | Nav items with no page yet | About Us and Insights point at the closest homepage section |
 | 11 | Footer and dropdown links | anything still `href="#"` |
