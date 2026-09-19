@@ -1,0 +1,15 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="800" fill="#F5F5F5"/>
+  <path d="M1005 247C1138 247 1197 300 1200 440V800H0V440C4 299 64 247 195 247H1005Z" fill="#8BCF3A"/>
+  <path d="M130 375L315 220H610L780 375V240H922V545C922 612 874 665 803 665H393C322 665 274 612 274 545V240H130V375Z" fill="#0B3E24"/>
+  <path d="M540 190L710 320H370L540 190Z" fill="#0B3E24"/>
+  <path d="M118 180L243 85L322 169L220 236L118 180Z" fill="#0B3E24"/>
+  <path d="M420 165H610L690 220H350L420 165Z" fill="#0B3E24"/>
+  <path d="M1005 240C1100 240 1187 285 1200 400V800H0V436C20 295 92 240 200 240H1005Z" fill="#8BCF3A" opacity="0.96"/>
+  <path d="M390 258H489V565H390V258Z" fill="#F5F5F5" opacity="0.12"/>
+  <path d="M864 258H984V565H864V258Z" fill="#F5F5F5" opacity="0.12"/>
+  <text x="110" y="520" fill="#0D5632" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="200" letter-spacing="-10">Berks</text>
+  <text x="110" y="706" fill="#0D5632" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="170" letter-spacing="-10">Insula</text>
+  <path d="M208 335L110 409V500H279V409L208 335Z" fill="#0D5632" opacity="0.2"/>
+  <path d="M746 257H868V585H746V257Z" fill="#0D5632" opacity="0.18"/>
+</svg>

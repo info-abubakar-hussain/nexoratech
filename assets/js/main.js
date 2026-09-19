@@ -181,7 +181,7 @@
   }
 
   /* ---------- 7. carousel engine (featured work & team slider) ---------- */
-  function wireCarousel(trackSel, cardSel, prevSel, nextSel, dotsSel) {
+  function wireCarousel(trackSel, cardSel, prevSel, nextSel, dotsSel, autoplaySeconds) {
     var track = $(trackSel);
     if (!track) return;
     var cards = $$(cardSel, track);
@@ -189,6 +189,8 @@
     var next = $(nextSel);
     var dotsBox = $(dotsSel);
     var index = 0;
+    var autoplayMs = typeof autoplaySeconds === "number" ? autoplaySeconds * 1000 : 0;
+    var autoplayId = null;
 
     function cardStep() {
       if (cards.length < 2) return track.clientWidth;
@@ -200,13 +202,24 @@
     function maxIndex() {
       return Math.max(0, cards.length - perView());
     }
+    function stopAutoplay() {
+      if (autoplayId) {
+        clearInterval(autoplayId);
+        autoplayId = null;
+      }
+    }
+    function startAutoplay() {
+      if (!autoplayMs || reduce || !cards.length || cards.length < 2) return;
+      stopAutoplay();
+      autoplayId = setInterval(function () {
+        var nextIndex = index >= maxIndex() ? 0 : index + 1;
+        goTo(nextIndex, true);
+      }, autoplayMs);
+    }
     function goTo(i, smooth) {
       i = Math.max(0, Math.min(i, maxIndex()));
       index = i;
-      track.scrollTo({
-        left: cards[i].offsetLeft - cards[0].offsetLeft,
-        behavior: reduce || smooth === false ? "auto" : "smooth"
-      });
+      track.scrollLeft = cards[i].offsetLeft - cards[0].offsetLeft;
       sync();
     }
     function readIndex() {
@@ -224,7 +237,7 @@
           var name = cards[i] && cards[i].querySelector("h3");
           b.type = "button";
           b.setAttribute("aria-label", name ? "Show " + name.textContent : "Go to slide " + (i + 1));
-          b.addEventListener("click", function () { goTo(i); });
+          b.addEventListener("click", function () { goTo(i); startAutoplay(); });
           dotsBox.appendChild(b);
         })(i);
       }
@@ -241,8 +254,12 @@
     }
 
     buildDots();
-    if (prev) prev.addEventListener("click", function () { goTo(index - 1); });
-    if (next) next.addEventListener("click", function () { goTo(index + 1); });
+    if (prev) prev.addEventListener("click", function () { goTo(index - 1); startAutoplay(); });
+    if (next) next.addEventListener("click", function () { goTo(index + 1); startAutoplay(); });
+    track.addEventListener("mouseenter", stopAutoplay);
+    track.addEventListener("mouseleave", startAutoplay);
+    track.addEventListener("focusin", stopAutoplay);
+    track.addEventListener("focusout", startAutoplay);
 
     var sTick = false;
     track.addEventListener("scroll", function () {
@@ -256,8 +273,8 @@
     }, { passive: true });
 
     track.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); goTo(index - 1); }
+      if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); startAutoplay(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); goTo(index - 1); startAutoplay(); }
     });
 
     var rTimer;
@@ -267,12 +284,14 @@
         buildDots();
         index = Math.min(index, maxIndex());
         goTo(index, false);
+        startAutoplay();
       }, 160);
     });
     sync();
+    startAutoplay();
   }
 
-  wireCarousel("#car-track", ".wcard", "#car-prev", "#car-next", "#dots");
+  wireCarousel("#car-track", ".wcard", "#car-prev", "#car-next", "#dots", 3.5);
   wireCarousel("#team-track", ".team-card", "#team-prev", "#team-next", "#team-dots");
 
   /* ---------- 8. lightbox ----------
@@ -491,36 +510,36 @@
 
     abubakar: {
       name: "AbuBakar Hussain",
-      role: "Founder & Solution Architect",
+      role: "Co-founder, Solution Architect & Mobile App Developer",
       tag: "Founding Leadership",
       color: "#8B5CF6",
       badgeIcon: "#i-layers",
       photo: "assets/img/team/abubakar-hussain.jpg",
-      quickStats: ["Solution Architecture", "Enterprise Scaling", "Cloud & Web3"],
-      bio: "Founding leader and principal solution architect who defines the overarching technical blueprint and systems architecture for every engagement. Stays deeply embedded in execution and technical governance from initial discovery and prototyping until systems are live in production.",
+      quickStats: ["Solution Architecture", "Mobile App Development", "Cloud & Delivery"],
+      bio: "Founding leader and solution architect focused on product strategy, mobile app delivery, and scalable system design. He brings together architecture planning, engineering leadership, and app development execution to keep product roadmaps practical and production-ready.",
       skills: [
         {
           category: "Architecture & Leadership",
-          items: ["Enterprise Solution Architecture", "Distributed Systems", "Cloud Infrastructure", "System Security"]
+          items: ["Enterprise Solution Architecture", "Mobile Product Strategy", "System Design", "Technical Leadership"]
         },
         {
-          category: "Technologies & Stacks",
-          items: ["Cloud Native", "RESTful & GraphQL APIs", "Microservices", "Scalable Databases", "Agile Leadership"]
+          category: "Technologies & Delivery",
+          items: ["Flutter Apps", "Cloud Native Systems", "REST APIs", "Scalable Delivery", "Agile Execution"]
         }
       ],
       experience: [
         {
-          title: "Founder & Principal Solution Architect",
+          title: "Founder, Solution Architect & Mobile App Developer",
           company: "CodemityTech",
           date: "Present",
-          desc: "Oversees end-to-end technical strategy, architecture design, and high-stakes client digital transformations across startups and global enterprises."
+          desc: "Leads product architecture, solution design, and mobile engineering execution for client products and internal platforms."
         }
       ],
       projects: [
         {
-          name: "High-Scale Distributed Multi-Tenant Core",
-          desc: "Designed scalable, secure cloud-native architecture supporting enterprise workflows and multi-region deployments.",
-          chips: ["Cloud", "Microservices", "Security"]
+          name: "DiDconn, CareCircle & Enterprise Mobile Platforms",
+          desc: "Designed and guided the technical architecture for secure digital identity and connected care products across mobile-first customer journeys.",
+          chips: ["Architecture", "Mobile", "Product Strategy"]
         }
       ],
       education: [
@@ -533,29 +552,29 @@
 
     mudassar: {
       name: "Mudassar Irshad",
-      role: "Senior .NET Core Full Stack Developer",
+      role: "Co-founder | Senior .NET Developer",
       tag: "Engineering Lead",
       color: "#3B82F6",
       badgeIcon: "#i-building",
       photo: "assets/img/team/mudassar-irshad.jpg",
-      quickStats: ["6+ Years Experience", "BS Computer System Eng.", "Enterprise .NET & React"],
-      bio: "Full Stack .NET Developer with 6+ years of experience designing, building, and maintaining high-throughput RESTful APIs and enterprise web applications using .NET Core, C#, and Entity Framework. Strong grounding in OOP, SOLID, and DRY architectural principles, with hands-on mastery in React.js and Angular front ends, PostgreSQL/SQL Server database design, Docker containerization, and automated CI/CD pipelines.",
+      quickStats: ["Co-founder", "5+ Years Experience", "Senior .NET Developer"],
+      bio: "Co-founder and experienced .NET developer focused on robust backend systems, enterprise APIs, and modern application architecture. Brings strong implementation discipline with SQL, ASP.NET Core, and service-driven architecture, helping teams deliver maintainable and secure business applications.",
       skills: [
         {
           category: "Languages & Frameworks",
-          items: ["C#", ".NET Core", "ASP.NET Core", "Entity Framework Core", "Blazor (Server & WASM)"]
+          items: ["C#", ".NET Core", "ASP.NET Core", "Entity Framework Core", "REST APIs"]
         },
         {
           category: "Frontend Development",
-          items: ["React.js", "Angular", "TypeScript", "Tailwind CSS", "Bootstrap", "Ant Design", "HTML5/CSS3"]
+          items: ["React.js", "Angular", "TypeScript", "Tailwind CSS", "HTML5/CSS3"]
         },
         {
           category: "Databases & Architecture",
-          items: ["SQL Server", "PostgreSQL", "MongoDB", "RESTful API Design", "SOLID / DRY", "Role-Based Access (RBAC)"]
+          items: ["SQL Server", "PostgreSQL", "MongoDB", "SOLID / DRY", "Role-Based Access (RBAC)"]
         },
         {
-          category: "Real-Time, DevOps & Security",
-          items: ["WebSockets", "Firebase Cloud Messaging (FCM)", "Docker", "Git CI/CD", "xUnit Testing", "JWT & 2FA"]
+          category: "DevOps & Security",
+          items: ["Docker", "Git CI/CD", "JWT & 2FA", "xUnit Testing", "Secure API Design"]
         }
       ],
       experience: [
@@ -563,36 +582,30 @@
           title: "Senior .NET Developer",
           company: "Swati Corporation",
           date: "April 2024 – Present",
-          desc: "Architected multi-NGO registration platform with RBAC security, blockchain document verification, real-time chat with FCM, and automated Docker CI/CD delivery pipelines."
+          desc: "Builds secure enterprise systems and backend services for digital workflows, document handling, and role-based access management."
         },
         {
           title: "Full Stack .NET and React Developer",
           company: "ItTrends",
           date: "January 2022 – March 2024",
-          desc: "Built enterprise client and task management portal with JWT/2FA security, integrated Posten e-signing and Tripletex finance workflows, and delivered React frontends."
+          desc: "Developed secure web applications and integrated external systems for client operations and finance workflows."
         },
         {
           title: "Full Stack .NET / Angular Developer",
           company: "Nixaam",
           date: "March 2022 – January 2023",
-          desc: "Developed high-performance ASP.NET Core APIs and optimized PostgreSQL database queries with complex entity relations for task management platform."
-        },
-        {
-          title: "Web & .NET Developer",
-          company: "TechKumak & 7Skies Solutions",
-          date: "2020 – 2021",
-          desc: "Provided ERP platform maintenance and built KJobs recruitment portal featuring live location tracking and secure role-based APIs."
+          desc: "Built maintainable ASP.NET Core APIs and optimized database-driven operations with complex relationships."
         }
       ],
       projects: [
         {
-          name: "Multi-NGO Secure Document & Registration Platform",
-          desc: "Centralized governance portal for multi-regional NGOs with blockchain-based tamper-evident filing and real-time push communication.",
-          chips: [".NET Core", "React", "PostgreSQL", "Docker", "Blockchain"]
+          name: "Multi-NGO Secure Platform",
+          desc: "Delivered secure, multi-tenant enterprise workflows for registration and document management with role-based access control.",
+          chips: [".NET Core", "React", "PostgreSQL", "Docker"]
         },
         {
-          name: "Enterprise Client & Task Management System",
-          desc: "Secure customer onboarding portal with external document signing and automated billing integrations.",
+          name: "Client & Task Management System",
+          desc: "Built enterprise onboarding and workflow tooling with strong API security and system reliability.",
           chips: ["ASP.NET Core", "React", "JWT / 2FA", "SQL Server"]
         }
       ],
@@ -600,10 +613,58 @@
         {
           degree: "Bachelor of Computer System Engineering",
           school: "The Islamia University of Bahawalpur (2021)"
+        }
+      ]
+    },
+
+    sarfraz: {
+      name: "Sarfraz Ahmad",
+      role: "Co-founder | Senior Flutter Developer",
+      tag: "Mobile Engineering",
+      color: "#F59E0B",
+      badgeIcon: "#i-mobile",
+      photo: "assets/img/team/sarfraz-ahmad.jpg",
+      quickStats: ["Co-founder", "5+ Years Experience", "Flutter & Cross-Platform"],
+      bio: "Co-founder and Senior Flutter developer with 5+ years of experience building cross-platform mobile apps for production-grade products. Worked on DiDconn, CareCircle, and the DiDconn Admin app, delivering polished user experiences, clean architecture, and reliable product execution for business-critical mobile systems.",
+      skills: [
+        {
+          category: "Mobile Development",
+          items: ["Flutter", "Dart", "State Management", "Cross-Platform App Design", "Mobile UI Architecture"]
         },
         {
-          degree: "Vice-Chair, International Affairs",
-          school: "IEEE UCET Student Branch"
+          category: "Product Delivery",
+          items: ["DiDconn", "CareCircle", "DiDconn Admin App", "Production Mobile Apps", "API Integration"]
+        }
+      ],
+      experience: [
+        {
+          title: "Senior Flutter Developer",
+          company: "Swati Technologies",
+          date: "Present",
+          desc: "Develops and maintains cross-platform applications for business-critical mobile products, with a focus on product quality, UX polish, and reliable release delivery."
+        }
+      ],
+      projects: [
+        {
+          name: "DiDconn",
+          desc: "Built a digital identity platform experience with secure onboarding and efficient client workflows.",
+          chips: ["Flutter", "Mobile", "UX"]
+        },
+        {
+          name: "CareCircle",
+          desc: "Developed a connected user experience focused on care coordination and service interaction flows.",
+          chips: ["Flutter", "Healthcare", "Product App"]
+        },
+        {
+          name: "DiDconn Admin App",
+          desc: "Delivered admin-side tooling to support operational management for the main DiDconn platform.",
+          chips: ["Flutter", "Admin Tooling", "Operations"]
+        }
+      ],
+      education: [
+        {
+          degree: "Computer Science / Software Engineering",
+          school: "Professional Experience"
         }
       ]
     },
