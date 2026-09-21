@@ -1020,7 +1020,7 @@
         "",
         message
       ].join("\n");
-      window.location.href = "mailto:hello@codemitytech.com?subject=" +
+      window.location.href = "mailto:info@codemitytech.com?subject=" +
         encodeURIComponent("Project brief — " + (need || "CodemityTech")) +
         "&body=" + encodeURIComponent(body);
       if (briefOk) briefOk.removeAttribute("hidden");
