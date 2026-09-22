@@ -18,8 +18,12 @@
   var toTop = $("#to-top");
   var spyLinks = $$(".nav-link[data-spy]");
   var spyTargets = spyLinks
-    .map(function (a) { return { a: a, el: $(a.getAttribute("href")) }; })
-    .filter(function (o) { return o.el; });
+    .map(function (a) {
+      var href = a.getAttribute("href") || "";
+      if (href.charAt(0) !== "#") return null;
+      try { return { a: a, el: $(href) }; } catch (e) { return null; }
+    })
+    .filter(function (o) { return o && o.el; });
 
   var ticking = false;
   function onScroll() {
@@ -108,29 +112,11 @@
     });
   }
 
-  /* ---------- 3b. solution card highlight on nav click ---------- */
-  $$(".drop a[href^='#sol-']").forEach(function (link) {
-    link.addEventListener("click", function (e) {
-      var hash = link.getAttribute("href");
-      var target = $(hash);
-      if (!target) return;
-      e.preventDefault();
+  /* ---------- 3b. close dropdown & mobile menu on dropdown link click ---------- */
+  $$("#drop-menu a").forEach(function (link) {
+    link.addEventListener("click", function () {
       setDrop(false);
-      // remove any existing highlight
-      $$(".sol.sol-highlight").forEach(function (el) { el.classList.remove("sol-highlight"); });
-      // smooth scroll
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
-      // apply highlight after scroll settles
-      setTimeout(function () {
-        target.classList.add("sol-highlight");
-        // remove after animation
-        target.addEventListener("animationend", function handler() {
-          target.classList.remove("sol-highlight");
-          target.removeEventListener("animationend", handler);
-        });
-      }, 400);
-      // update URL hash without jumping
-      history.pushState(null, "", hash);
+      if (isMobileNav() && nav && nav.classList.contains("open")) setBurger(false);
     });
   });
 
@@ -157,6 +143,23 @@
       try { localStorage.setItem("codemity-theme", next); } catch (e) { }
     });
   }
+
+  /* ---------- 4b. hero landing animation ---------- */
+  function triggerHeroLanding() {
+    requestAnimationFrame(function () {
+      setTimeout(function () {
+        document.body.classList.add("loaded");
+      }, 50);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", triggerHeroLanding);
+  } else {
+    triggerHeroLanding();
+  }
+  window.addEventListener("pageshow", function () {
+    document.body.classList.add("loaded");
+  });
 
   /* ---------- 5. reveal on scroll ---------- */
   var revs = $$(".rv");
@@ -235,20 +238,6 @@
         }
       }
       return cards.length - 1;
-    }
-    function stopAutoplay() {
-      if (autoplayId) {
-        clearInterval(autoplayId);
-        autoplayId = null;
-      }
-    }
-    function startAutoplay() {
-      if (!autoplayMs || reduce || !cards.length || cards.length < 2) return;
-      stopAutoplay();
-      autoplayId = setInterval(function () {
-        var nextIndex = index >= maxIndex() ? 0 : index + 1;
-        goTo(nextIndex, true);
-      }, autoplayMs);
     }
     function stopAutoplay() {
       if (autoplayId) {
