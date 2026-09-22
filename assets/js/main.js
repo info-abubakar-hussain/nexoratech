@@ -108,6 +108,32 @@
     });
   }
 
+  /* ---------- 3b. solution card highlight on nav click ---------- */
+  $$(".drop a[href^='#sol-']").forEach(function (link) {
+    link.addEventListener("click", function (e) {
+      var hash = link.getAttribute("href");
+      var target = $(hash);
+      if (!target) return;
+      e.preventDefault();
+      setDrop(false);
+      // remove any existing highlight
+      $$(".sol.sol-highlight").forEach(function (el) { el.classList.remove("sol-highlight"); });
+      // smooth scroll
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // apply highlight after scroll settles
+      setTimeout(function () {
+        target.classList.add("sol-highlight");
+        // remove after animation
+        target.addEventListener("animationend", function handler() {
+          target.classList.remove("sol-highlight");
+          target.removeEventListener("animationend", handler);
+        });
+      }, 400);
+      // update URL hash without jumping
+      history.pushState(null, "", hash);
+    });
+  });
+
   /* ---------- 4. theme ---------- */
   var themeBtn = $("#theme");
   function currentTheme() {
@@ -196,11 +222,33 @@
       if (cards.length < 2) return track.clientWidth;
       return cards[1].offsetLeft - cards[0].offsetLeft;
     }
-    function perView() {
-      return Math.max(1, Math.round(track.clientWidth / cardStep()));
+    function getMaxScroll() {
+      return Math.max(0, track.scrollWidth - track.clientWidth);
     }
     function maxIndex() {
-      return Math.max(0, cards.length - perView());
+      var maxScroll = getMaxScroll();
+      if (maxScroll <= 2 || cards.length < 2) return 0;
+      for (var i = 0; i < cards.length; i++) {
+        var cardLeft = cards[i].offsetLeft - cards[0].offsetLeft;
+        if (cardLeft >= maxScroll - 5) {
+          return i;
+        }
+      }
+      return cards.length - 1;
+    }
+    function stopAutoplay() {
+      if (autoplayId) {
+        clearInterval(autoplayId);
+        autoplayId = null;
+      }
+    }
+    function startAutoplay() {
+      if (!autoplayMs || reduce || !cards.length || cards.length < 2) return;
+      stopAutoplay();
+      autoplayId = setInterval(function () {
+        var nextIndex = index >= maxIndex() ? 0 : index + 1;
+        goTo(nextIndex, true);
+      }, autoplayMs);
     }
     function stopAutoplay() {
       if (autoplayId) {
@@ -217,14 +265,38 @@
       }, autoplayMs);
     }
     function goTo(i, smooth) {
-      i = Math.max(0, Math.min(i, maxIndex()));
+      var max = maxIndex();
+      i = Math.max(0, Math.min(i, max));
       index = i;
-      track.scrollLeft = cards[i].offsetLeft - cards[0].offsetLeft;
+      var maxScroll = getMaxScroll();
+      var targetLeft;
+      if (i >= max) {
+        targetLeft = maxScroll;
+      } else {
+        var cardLeft = cards[i].offsetLeft - cards[0].offsetLeft;
+        targetLeft = Math.min(cardLeft, maxScroll);
+      }
+      if (typeof track.scrollTo === "function") {
+        track.scrollTo({
+          left: targetLeft,
+          behavior: (smooth === false || reduce) ? "auto" : "smooth"
+        });
+      } else {
+        track.scrollLeft = targetLeft;
+      }
       sync();
     }
     function readIndex() {
+      var maxScroll = getMaxScroll();
+      if (maxScroll <= 0) return 0;
+      if (track.scrollLeft >= maxScroll - 8) {
+        return maxIndex();
+      }
+      if (track.scrollLeft <= 8) {
+        return 0;
+      }
       var step = cardStep() || 1;
-      return Math.round(track.scrollLeft / step);
+      return Math.min(maxIndex(), Math.max(0, Math.round(track.scrollLeft / step)));
     }
     function buildDots() {
       if (!dotsBox) return;
@@ -244,8 +316,11 @@
     }
     function sync() {
       var max = maxIndex();
-      if (prev) prev.disabled = index <= 0;
-      if (next) next.disabled = index >= max;
+      var maxScroll = getMaxScroll();
+      var atStart = track.scrollLeft <= 5 || index <= 0;
+      var atEnd = track.scrollLeft >= maxScroll - 5 || index >= max;
+      if (prev) prev.disabled = atStart;
+      if (next) next.disabled = atEnd;
       if (dotsBox) {
         $$("button", dotsBox).forEach(function (d, i) {
           d.setAttribute("aria-current", i === index ? "true" : "false");
@@ -254,8 +329,16 @@
     }
 
     buildDots();
-    if (prev) prev.addEventListener("click", function () { goTo(index - 1); startAutoplay(); });
-    if (next) next.addEventListener("click", function () { goTo(index + 1); startAutoplay(); });
+    if (prev) prev.addEventListener("click", function () {
+      var cur = readIndex();
+      goTo(cur <= 0 ? 0 : cur - 1);
+      startAutoplay();
+    });
+    if (next) next.addEventListener("click", function () {
+      var cur = readIndex();
+      goTo(cur >= maxIndex() ? maxIndex() : cur + 1);
+      startAutoplay();
+    });
     track.addEventListener("mouseenter", stopAutoplay);
     track.addEventListener("mouseleave", startAutoplay);
     track.addEventListener("focusin", stopAutoplay);
@@ -273,8 +356,18 @@
     }, { passive: true });
 
     track.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); startAutoplay(); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); goTo(index - 1); startAutoplay(); }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        var cur = readIndex();
+        goTo(cur >= maxIndex() ? maxIndex() : cur + 1);
+        startAutoplay();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        var cur = readIndex();
+        goTo(cur <= 0 ? 0 : cur - 1);
+        startAutoplay();
+      }
     });
 
     var rTimer;
@@ -546,6 +639,65 @@
         {
           degree: "Bachelor of Science in Computer Science & Systems",
           school: "Engineering & Technology Leadership"
+        }
+      ]
+    },
+
+    zeeshan: {
+      name: "Muhammad Zeeshan",
+      role: "Co-Founder | Business Development & Client Relations",
+      tag: "Founding Leadership",
+      color: "#10B981",
+      badgeIcon: "#i-users",
+      photo: "assets/img/team/muhammad-zeeshan.jpg",
+      quickStats: ["Co-Founder", "Business Development", "Client Relations", "Technical Bridge"],
+      bio: "Co-Founder focused on Business Development and Client Relationships at CodemityTech. I work closely with clients to understand their business needs, shape the right digital solutions, and connect those needs with our technical team. My focus is on clear communication, strong client relationships, and keeping projects aligned from idea to delivery.",
+      skills: [
+        {
+          category: "Business & Client Strategy",
+          items: ["Business Development", "Client Communication", "Requirement Gathering", "Solution Alignment", "Client Relations"]
+        },
+        {
+          category: "Project & Technical Coordination",
+          items: ["Project Coordination", "Technical Requirement Analysis", "Discovery & Scoping", "Cross-Functional Alignment", "Stakeholder Management"]
+        }
+      ],
+      experience: [
+        {
+          title: "Co-Founder | Business Development & Client Relations",
+          company: "CodemityTech",
+          date: "Present",
+          desc: "Leads business development, client communication, solution discussions, and coordination with the technical team to ensure that business goals align seamlessly with engineering execution."
+        },
+        {
+          title: "Sales Agent",
+          company: "Fairways Logistics",
+          date: "Previous Experience",
+          desc: "Managed client acquisition, logistics contract negotiation, and customer relationship building, driving commercial growth and reliable service delivery."
+        },
+        {
+          title: "Sales Representative",
+          company: "Quality Resource LLC",
+          date: "Previous Experience",
+          desc: "Handled consultative outreach, identified prospective opportunities, qualified client requirements, and consistently met conversion targets."
+        }
+      ],
+      projects: [
+        {
+          name: "What I Bring",
+          desc: "“I help bridge the gap between business requirements and technical execution by working with clients to understand their goals and coordinating with our technical team.”",
+          chips: ["Business Development", "Client Communication", "Technical Execution", "Solution Alignment"]
+        },
+        {
+          name: "Client Onboarding & Solution Alignment",
+          desc: "Guiding end-to-end client engagement—from initial discovery and requirement gathering through solution scoping, technical coordination, and delivery handover.",
+          chips: ["Requirement Gathering", "Project Coordination", "Client Relations"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Science in Computer Science (BS CS)",
+          school: "Virtual University of Pakistan — Provides an essential technical perspective to effectively communicate with developers, understand complex software architectures, and translate client visions into viable engineering roadmaps."
         }
       ]
     },
@@ -1001,7 +1153,66 @@
     });
   }
 
-  /* ---------- 12. project brief — opens a prefilled mailto ---------- */
+  /* ---------- 12. custom select dropdown ---------- */
+  (function () {
+    var wrap = $("#brief-need-wrap");
+    if (!wrap) return;
+    var btn = $("#brief-need-btn");
+    var val = $("#brief-need-val");
+    var menu = $("#brief-need-menu");
+    var hidden = $("#brief-need");
+    var items = menu.querySelectorAll("li");
+
+    val.classList.add("is-placeholder");
+    function toggle(open) {
+      var isOpen = typeof open === "boolean" ? open : !menu.classList.contains("is-open");
+      menu.classList.toggle("is-open", isOpen);
+      btn.setAttribute("aria-expanded", isOpen);
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggle();
+    });
+
+    items.forEach(function (li) {
+      li.addEventListener("click", function () {
+        items.forEach(function (el) { el.classList.remove("is-selected"); });
+        li.classList.add("is-selected");
+        val.textContent = li.dataset.value;
+        val.classList.remove("is-placeholder");
+        hidden.value = li.dataset.value;
+        toggle(false);
+      });
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!wrap.contains(e.target)) toggle(false);
+    });
+
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") toggle(false);
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle(true);
+        var first = menu.querySelector("li");
+        if (first) first.focus();
+      }
+    });
+    menu.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { toggle(false); btn.focus(); }
+    });
+    items.forEach(function (li) {
+      li.setAttribute("tabindex", "0");
+      li.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); li.click(); btn.focus(); }
+        if (e.key === "ArrowDown" && li.nextElementSibling) { e.preventDefault(); li.nextElementSibling.focus(); }
+        if (e.key === "ArrowUp" && li.previousElementSibling) { e.preventDefault(); li.previousElementSibling.focus(); }
+      });
+    });
+  })();
+
+  /* ---------- 13. project brief — opens a prefilled mailto ---------- */
   var brief = $("#brief");
   var briefOk = $("#brief-ok");
   if (brief) {
