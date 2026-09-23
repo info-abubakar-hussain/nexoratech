@@ -9,7 +9,7 @@
 
   var mq = window.matchMedia;
   var reduce = mq && mq("(prefers-reduced-motion:reduce)").matches;
-  var isMobileNav = function () { return mq && mq("(max-width:1060px)").matches; };
+  var isMobileNav = function () { return mq && mq("(max-width:1180px)").matches; };
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
@@ -18,8 +18,12 @@
   var toTop = $("#to-top");
   var spyLinks = $$(".nav-link[data-spy]");
   var spyTargets = spyLinks
-    .map(function (a) { return { a: a, el: $(a.getAttribute("href")) }; })
-    .filter(function (o) { return o.el; });
+    .map(function (a) {
+      var href = a.getAttribute("href") || "";
+      if (href.charAt(0) !== "#") return null;
+      try { return { a: a, el: $(href) }; } catch (e) { return null; }
+    })
+    .filter(function (o) { return o && o.el; });
 
   var ticking = false;
   function onScroll() {
@@ -57,6 +61,7 @@
   function setBurger(open) {
     if (!burger || !nav) return;
     nav.classList.toggle("open", open);
+    document.body.classList.toggle("nav-open", open);
     burger.setAttribute("aria-expanded", open ? "true" : "false");
     burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     var use = burger.querySelector("use");
@@ -108,6 +113,14 @@
     });
   }
 
+  /* ---------- 3b. close dropdown & mobile menu on dropdown link click ---------- */
+  $$("#drop-menu a").forEach(function (link) {
+    link.addEventListener("click", function () {
+      setDrop(false);
+      if (isMobileNav() && nav && nav.classList.contains("open")) setBurger(false);
+    });
+  });
+
   /* ---------- 4. theme ---------- */
   var themeBtn = $("#theme");
   function currentTheme() {
@@ -132,18 +145,67 @@
     });
   }
 
+  /* ---------- 4b. hero landing animation ---------- */
+  function triggerHeroLanding() {
+    requestAnimationFrame(function () {
+      setTimeout(function () {
+        document.body.classList.add("loaded");
+      }, 50);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", triggerHeroLanding);
+  } else {
+    triggerHeroLanding();
+  }
+  window.addEventListener("pageshow", function () {
+    document.body.classList.add("loaded");
+  });
+
   /* ---------- 5. reveal on scroll ---------- */
   var revs = $$(".rv");
+  function checkReveal() {
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    revs.forEach(function (el) {
+      if (el.classList.contains("in")) return;
+      var rect = el.getBoundingClientRect();
+      if (rect.top <= vh + 80) {
+        el.classList.add("in");
+      }
+    });
+  }
+
   if (reduce || !("IntersectionObserver" in window)) {
     revs.forEach(function (el) { el.classList.add("in"); });
   } else {
     var ro = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting) { en.target.classList.add("in"); ro.unobserve(en.target); }
+        if (en.isIntersecting) {
+          en.target.classList.add("in");
+          ro.unobserve(en.target);
+        }
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" });
-    revs.forEach(function (el) { ro.observe(el); });
+    }, { threshold: 0, rootMargin: "0px 0px 80px 0px" });
+
+    revs.forEach(function (el) {
+      var rect = el.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top <= vh) {
+        el.classList.add("in");
+      } else {
+        ro.observe(el);
+      }
+    });
   }
+
+  window.addEventListener("hashchange", checkReveal);
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if (a) {
+      setTimeout(checkReveal, 50);
+      setTimeout(checkReveal, 350);
+    }
+  });
 
   /* ---------- 6. stat count-up & hero interactions ---------- */
   var counters = $$("[data-count]");
@@ -151,37 +213,36 @@
     if (el.dataset.counted) return;
     el.dataset.counted = "true";
     var target = parseFloat(el.getAttribute("data-count"));
-    if (isNaN(target)) return;
-    if (reduce) { el.textContent = String(target); return; }
-    var dur = 1400, t0 = null;
+    if (isNaN(target) || reduce) return;
+    var dur = 800, t0 = null;
+    var startVal = Math.floor(target * 0.6); // Start close to final value so it never flashes low or broken
     function step(ts) {
       if (t0 === null) t0 = ts;
       var p = Math.min((ts - t0) / dur, 1);
-      el.textContent = String(Math.round((1 - Math.pow(1 - p, 3)) * target));
+      var ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = String(Math.round(startVal + (target - startVal) * ease));
       if (p < 1) requestAnimationFrame(step);
     }
-    el.textContent = "0";
     requestAnimationFrame(step);
   }
 
-  // Count up hero stats right when hero entrance plays
   setTimeout(function () {
     $$(".hero .stat [data-count]").forEach(function (el) {
       countUp(el);
     });
-  }, 700);
+  }, 600);
 
   if (counters.length && "IntersectionObserver" in window) {
     var co = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (en.isIntersecting) { countUp(en.target); co.unobserve(en.target); }
       });
-    }, { threshold: 0.2 });
+    }, { threshold: 0.1 });
     counters.forEach(function (el) { co.observe(el); });
   }
 
   /* ---------- 7. carousel engine (featured work & team slider) ---------- */
-  function wireCarousel(trackSel, cardSel, prevSel, nextSel, dotsSel) {
+  function wireCarousel(trackSel, cardSel, prevSel, nextSel, dotsSel, autoplaySeconds) {
     var track = $(trackSel);
     if (!track) return;
     var cards = $$(cardSel, track);
@@ -189,29 +250,74 @@
     var next = $(nextSel);
     var dotsBox = $(dotsSel);
     var index = 0;
+    var autoplayMs = typeof autoplaySeconds === "number" ? autoplaySeconds * 1000 : 0;
+    var autoplayId = null;
 
     function cardStep() {
       if (cards.length < 2) return track.clientWidth;
       return cards[1].offsetLeft - cards[0].offsetLeft;
     }
-    function perView() {
-      return Math.max(1, Math.round(track.clientWidth / cardStep()));
+    function getMaxScroll() {
+      return Math.max(0, track.scrollWidth - track.clientWidth);
     }
     function maxIndex() {
-      return Math.max(0, cards.length - perView());
+      var maxScroll = getMaxScroll();
+      if (maxScroll <= 2 || cards.length < 2) return 0;
+      for (var i = 0; i < cards.length; i++) {
+        var cardLeft = cards[i].offsetLeft - cards[0].offsetLeft;
+        if (cardLeft >= maxScroll - 5) {
+          return i;
+        }
+      }
+      return cards.length - 1;
+    }
+    function stopAutoplay() {
+      if (autoplayId) {
+        clearInterval(autoplayId);
+        autoplayId = null;
+      }
+    }
+    function startAutoplay() {
+      if (!autoplayMs || reduce || !cards.length || cards.length < 2) return;
+      stopAutoplay();
+      autoplayId = setInterval(function () {
+        var nextIndex = index >= maxIndex() ? 0 : index + 1;
+        goTo(nextIndex, true);
+      }, autoplayMs);
     }
     function goTo(i, smooth) {
-      i = Math.max(0, Math.min(i, maxIndex()));
+      var max = maxIndex();
+      i = Math.max(0, Math.min(i, max));
       index = i;
-      track.scrollTo({
-        left: cards[i].offsetLeft - cards[0].offsetLeft,
-        behavior: reduce || smooth === false ? "auto" : "smooth"
-      });
+      var maxScroll = getMaxScroll();
+      var targetLeft;
+      if (i >= max) {
+        targetLeft = maxScroll;
+      } else {
+        var cardLeft = cards[i].offsetLeft - cards[0].offsetLeft;
+        targetLeft = Math.min(cardLeft, maxScroll);
+      }
+      if (typeof track.scrollTo === "function") {
+        track.scrollTo({
+          left: targetLeft,
+          behavior: (smooth === false || reduce) ? "auto" : "smooth"
+        });
+      } else {
+        track.scrollLeft = targetLeft;
+      }
       sync();
     }
     function readIndex() {
+      var maxScroll = getMaxScroll();
+      if (maxScroll <= 0) return 0;
+      if (track.scrollLeft >= maxScroll - 8) {
+        return maxIndex();
+      }
+      if (track.scrollLeft <= 8) {
+        return 0;
+      }
       var step = cardStep() || 1;
-      return Math.round(track.scrollLeft / step);
+      return Math.min(maxIndex(), Math.max(0, Math.round(track.scrollLeft / step)));
     }
     function buildDots() {
       if (!dotsBox) return;
@@ -224,15 +330,18 @@
           var name = cards[i] && cards[i].querySelector("h3");
           b.type = "button";
           b.setAttribute("aria-label", name ? "Show " + name.textContent : "Go to slide " + (i + 1));
-          b.addEventListener("click", function () { goTo(i); });
+          b.addEventListener("click", function () { goTo(i); startAutoplay(); });
           dotsBox.appendChild(b);
         })(i);
       }
     }
     function sync() {
       var max = maxIndex();
-      if (prev) prev.disabled = index <= 0;
-      if (next) next.disabled = index >= max;
+      var maxScroll = getMaxScroll();
+      var atStart = track.scrollLeft <= 5 || index <= 0;
+      var atEnd = track.scrollLeft >= maxScroll - 5 || index >= max;
+      if (prev) prev.disabled = atStart;
+      if (next) next.disabled = atEnd;
       if (dotsBox) {
         $$("button", dotsBox).forEach(function (d, i) {
           d.setAttribute("aria-current", i === index ? "true" : "false");
@@ -241,8 +350,20 @@
     }
 
     buildDots();
-    if (prev) prev.addEventListener("click", function () { goTo(index - 1); });
-    if (next) next.addEventListener("click", function () { goTo(index + 1); });
+    if (prev) prev.addEventListener("click", function () {
+      var cur = readIndex();
+      goTo(cur <= 0 ? 0 : cur - 1);
+      startAutoplay();
+    });
+    if (next) next.addEventListener("click", function () {
+      var cur = readIndex();
+      goTo(cur >= maxIndex() ? maxIndex() : cur + 1);
+      startAutoplay();
+    });
+    track.addEventListener("mouseenter", stopAutoplay);
+    track.addEventListener("mouseleave", startAutoplay);
+    track.addEventListener("focusin", stopAutoplay);
+    track.addEventListener("focusout", startAutoplay);
 
     var sTick = false;
     track.addEventListener("scroll", function () {
@@ -256,8 +377,18 @@
     }, { passive: true });
 
     track.addEventListener("keydown", function (e) {
-      if (e.key === "ArrowRight") { e.preventDefault(); goTo(index + 1); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); goTo(index - 1); }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        var cur = readIndex();
+        goTo(cur >= maxIndex() ? maxIndex() : cur + 1);
+        startAutoplay();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        var cur = readIndex();
+        goTo(cur <= 0 ? 0 : cur - 1);
+        startAutoplay();
+      }
     });
 
     var rTimer;
@@ -267,12 +398,14 @@
         buildDots();
         index = Math.min(index, maxIndex());
         goTo(index, false);
+        startAutoplay();
       }, 160);
     });
     sync();
+    startAutoplay();
   }
 
-  wireCarousel("#car-track", ".wcard", "#car-prev", "#car-next", "#dots");
+  wireCarousel("#car-track", ".wcard", "#car-prev", "#car-next", "#dots", 3.5);
   wireCarousel("#team-track", ".team-card", "#team-prev", "#team-next", "#team-dots");
 
   /* ---------- 8. lightbox ----------
@@ -491,36 +624,36 @@
 
     abubakar: {
       name: "AbuBakar Hussain",
-      role: "Founder & Solution Architect",
+      role: "Co-founder, Solution Architect & Mobile App Developer",
       tag: "Founding Leadership",
       color: "#8B5CF6",
       badgeIcon: "#i-layers",
       photo: "assets/img/team/abubakar-hussain.jpg",
-      quickStats: ["Solution Architecture", "Enterprise Scaling", "Cloud & Web3"],
-      bio: "Founding leader and principal solution architect who defines the overarching technical blueprint and systems architecture for every engagement. Stays deeply embedded in execution and technical governance from initial discovery and prototyping until systems are live in production.",
+      quickStats: ["Solution Architecture", "Mobile App Development", "Cloud & Delivery"],
+      bio: "Founding leader and solution architect focused on product strategy, mobile app delivery, and scalable system design. He brings together architecture planning, engineering leadership, and app development execution to keep product roadmaps practical and production-ready.",
       skills: [
         {
           category: "Architecture & Leadership",
-          items: ["Enterprise Solution Architecture", "Distributed Systems", "Cloud Infrastructure", "System Security"]
+          items: ["Enterprise Solution Architecture", "Mobile Product Strategy", "System Design", "Technical Leadership"]
         },
         {
-          category: "Technologies & Stacks",
-          items: ["Cloud Native", "RESTful & GraphQL APIs", "Microservices", "Scalable Databases", "Agile Leadership"]
+          category: "Technologies & Delivery",
+          items: ["Flutter Apps", "Cloud Native Systems", "REST APIs", "Scalable Delivery", "Agile Execution"]
         }
       ],
       experience: [
         {
-          title: "Founder & Principal Solution Architect",
+          title: "Founder, Solution Architect & Mobile App Developer",
           company: "CodemityTech",
           date: "Present",
-          desc: "Oversees end-to-end technical strategy, architecture design, and high-stakes client digital transformations across startups and global enterprises."
+          desc: "Leads product architecture, solution design, and mobile engineering execution for client products and internal platforms."
         }
       ],
       projects: [
         {
-          name: "High-Scale Distributed Multi-Tenant Core",
-          desc: "Designed scalable, secure cloud-native architecture supporting enterprise workflows and multi-region deployments.",
-          chips: ["Cloud", "Microservices", "Security"]
+          name: "DiDconn, CareCircle & Enterprise Mobile Platforms",
+          desc: "Designed and guided the technical architecture for secure digital identity and connected care products across mobile-first customer journeys.",
+          chips: ["Architecture", "Mobile", "Product Strategy"]
         }
       ],
       education: [
@@ -531,31 +664,90 @@
       ]
     },
 
+    zeeshan: {
+      name: "Muhammad Zeeshan",
+      role: "Co-Founder | Business Development & Client Relations",
+      tag: "Founding Leadership",
+      color: "#10B981",
+      badgeIcon: "#i-users",
+      photo: "assets/img/team/muhammad-zeeshan.jpg",
+      quickStats: ["Co-Founder", "Business Development", "Client Relations", "Technical Bridge"],
+      bio: "Co-Founder focused on Business Development and Client Relationships at CodemityTech. I work closely with clients to understand their business needs, shape the right digital solutions, and connect those needs with our technical team. My focus is on clear communication, strong client relationships, and keeping projects aligned from idea to delivery.",
+      skills: [
+        {
+          category: "Business & Client Strategy",
+          items: ["Business Development", "Client Communication", "Requirement Gathering", "Solution Alignment", "Client Relations"]
+        },
+        {
+          category: "Project & Technical Coordination",
+          items: ["Project Coordination", "Technical Requirement Analysis", "Discovery & Scoping", "Cross-Functional Alignment", "Stakeholder Management"]
+        }
+      ],
+      experience: [
+        {
+          title: "Co-Founder | Business Development & Client Relations",
+          company: "CodemityTech",
+          date: "Present",
+          desc: "Leads business development, client communication, solution discussions, and coordination with the technical team to ensure that business goals align seamlessly with engineering execution."
+        },
+        {
+          title: "Sales Agent",
+          company: "Fairways Logistics",
+          date: "Previous Experience",
+          desc: "Managed client acquisition, logistics contract negotiation, and customer relationship building, driving commercial growth and reliable service delivery."
+        },
+        {
+          title: "Sales Representative",
+          company: "Quality Resource LLC",
+          date: "Previous Experience",
+          desc: "Handled consultative outreach, identified prospective opportunities, qualified client requirements, and consistently met conversion targets."
+        }
+      ],
+      projects: [
+        {
+          name: "What I Bring",
+          desc: "“I help bridge the gap between business requirements and technical execution by working with clients to understand their goals and coordinating with our technical team.”",
+          chips: ["Business Development", "Client Communication", "Technical Execution", "Solution Alignment"]
+        },
+        {
+          name: "Client Onboarding & Solution Alignment",
+          desc: "Guiding end-to-end client engagement—from initial discovery and requirement gathering through solution scoping, technical coordination, and delivery handover.",
+          chips: ["Requirement Gathering", "Project Coordination", "Client Relations"]
+        }
+      ],
+      education: [
+        {
+          degree: "Bachelor of Science in Computer Science (BS CS)",
+          school: "Virtual University of Pakistan — Provides an essential technical perspective to effectively communicate with developers, understand complex software architectures, and translate client visions into viable engineering roadmaps."
+        }
+      ]
+    },
+
     mudassar: {
       name: "Mudassar Irshad",
-      role: "Senior .NET Core Full Stack Developer",
+      role: "Co-founder | Senior .NET Developer",
       tag: "Engineering Lead",
       color: "#3B82F6",
       badgeIcon: "#i-building",
       photo: "assets/img/team/mudassar-irshad.jpg",
-      quickStats: ["6+ Years Experience", "BS Computer System Eng.", "Enterprise .NET & React"],
-      bio: "Full Stack .NET Developer with 6+ years of experience designing, building, and maintaining high-throughput RESTful APIs and enterprise web applications using .NET Core, C#, and Entity Framework. Strong grounding in OOP, SOLID, and DRY architectural principles, with hands-on mastery in React.js and Angular front ends, PostgreSQL/SQL Server database design, Docker containerization, and automated CI/CD pipelines.",
+      quickStats: ["Co-founder", "5+ Years Experience", "Senior .NET Developer"],
+      bio: "Co-founder and experienced .NET developer focused on robust backend systems, enterprise APIs, and modern application architecture. Brings strong implementation discipline with SQL, ASP.NET Core, and service-driven architecture, helping teams deliver maintainable and secure business applications.",
       skills: [
         {
           category: "Languages & Frameworks",
-          items: ["C#", ".NET Core", "ASP.NET Core", "Entity Framework Core", "Blazor (Server & WASM)"]
+          items: ["C#", ".NET Core", "ASP.NET Core", "Entity Framework Core", "REST APIs"]
         },
         {
           category: "Frontend Development",
-          items: ["React.js", "Angular", "TypeScript", "Tailwind CSS", "Bootstrap", "Ant Design", "HTML5/CSS3"]
+          items: ["React.js", "Angular", "TypeScript", "Tailwind CSS", "HTML5/CSS3"]
         },
         {
           category: "Databases & Architecture",
-          items: ["SQL Server", "PostgreSQL", "MongoDB", "RESTful API Design", "SOLID / DRY", "Role-Based Access (RBAC)"]
+          items: ["SQL Server", "PostgreSQL", "MongoDB", "SOLID / DRY", "Role-Based Access (RBAC)"]
         },
         {
-          category: "Real-Time, DevOps & Security",
-          items: ["WebSockets", "Firebase Cloud Messaging (FCM)", "Docker", "Git CI/CD", "xUnit Testing", "JWT & 2FA"]
+          category: "DevOps & Security",
+          items: ["Docker", "Git CI/CD", "JWT & 2FA", "xUnit Testing", "Secure API Design"]
         }
       ],
       experience: [
@@ -563,36 +755,30 @@
           title: "Senior .NET Developer",
           company: "Swati Corporation",
           date: "April 2024 – Present",
-          desc: "Architected multi-NGO registration platform with RBAC security, blockchain document verification, real-time chat with FCM, and automated Docker CI/CD delivery pipelines."
+          desc: "Builds secure enterprise systems and backend services for digital workflows, document handling, and role-based access management."
         },
         {
           title: "Full Stack .NET and React Developer",
           company: "ItTrends",
           date: "January 2022 – March 2024",
-          desc: "Built enterprise client and task management portal with JWT/2FA security, integrated Posten e-signing and Tripletex finance workflows, and delivered React frontends."
+          desc: "Developed secure web applications and integrated external systems for client operations and finance workflows."
         },
         {
           title: "Full Stack .NET / Angular Developer",
           company: "Nixaam",
           date: "March 2022 – January 2023",
-          desc: "Developed high-performance ASP.NET Core APIs and optimized PostgreSQL database queries with complex entity relations for task management platform."
-        },
-        {
-          title: "Web & .NET Developer",
-          company: "TechKumak & 7Skies Solutions",
-          date: "2020 – 2021",
-          desc: "Provided ERP platform maintenance and built KJobs recruitment portal featuring live location tracking and secure role-based APIs."
+          desc: "Built maintainable ASP.NET Core APIs and optimized database-driven operations with complex relationships."
         }
       ],
       projects: [
         {
-          name: "Multi-NGO Secure Document & Registration Platform",
-          desc: "Centralized governance portal for multi-regional NGOs with blockchain-based tamper-evident filing and real-time push communication.",
-          chips: [".NET Core", "React", "PostgreSQL", "Docker", "Blockchain"]
+          name: "Multi-NGO Secure Platform",
+          desc: "Delivered secure, multi-tenant enterprise workflows for registration and document management with role-based access control.",
+          chips: [".NET Core", "React", "PostgreSQL", "Docker"]
         },
         {
-          name: "Enterprise Client & Task Management System",
-          desc: "Secure customer onboarding portal with external document signing and automated billing integrations.",
+          name: "Client & Task Management System",
+          desc: "Built enterprise onboarding and workflow tooling with strong API security and system reliability.",
           chips: ["ASP.NET Core", "React", "JWT / 2FA", "SQL Server"]
         }
       ],
@@ -600,10 +786,58 @@
         {
           degree: "Bachelor of Computer System Engineering",
           school: "The Islamia University of Bahawalpur (2021)"
+        }
+      ]
+    },
+
+    sarfraz: {
+      name: "Sarfraz Ahmad",
+      role: "Co-founder | Senior Flutter Developer",
+      tag: "Mobile Engineering",
+      color: "#F59E0B",
+      badgeIcon: "#i-mobile",
+      photo: "assets/img/team/sarfraz-ahmad.jpg",
+      quickStats: ["Co-founder", "5+ Years Experience", "Flutter & Cross-Platform"],
+      bio: "Co-founder and Senior Flutter developer with 5+ years of experience building cross-platform mobile apps for production-grade products. Worked on DiDconn, CareCircle, and the DiDconn Admin app, delivering polished user experiences, clean architecture, and reliable product execution for business-critical mobile systems.",
+      skills: [
+        {
+          category: "Mobile Development",
+          items: ["Flutter", "Dart", "State Management", "Cross-Platform App Design", "Mobile UI Architecture"]
         },
         {
-          degree: "Vice-Chair, International Affairs",
-          school: "IEEE UCET Student Branch"
+          category: "Product Delivery",
+          items: ["DiDconn", "CareCircle", "DiDconn Admin App", "Production Mobile Apps", "API Integration"]
+        }
+      ],
+      experience: [
+        {
+          title: "Senior Flutter Developer",
+          company: "Swati Technologies",
+          date: "Present",
+          desc: "Develops and maintains cross-platform applications for business-critical mobile products, with a focus on product quality, UX polish, and reliable release delivery."
+        }
+      ],
+      projects: [
+        {
+          name: "DiDconn",
+          desc: "Built a digital identity platform experience with secure onboarding and efficient client workflows.",
+          chips: ["Flutter", "Mobile", "UX"]
+        },
+        {
+          name: "CareCircle",
+          desc: "Developed a connected user experience focused on care coordination and service interaction flows.",
+          chips: ["Flutter", "Healthcare", "Product App"]
+        },
+        {
+          name: "DiDconn Admin App",
+          desc: "Delivered admin-side tooling to support operational management for the main DiDconn platform.",
+          chips: ["Flutter", "Admin Tooling", "Operations"]
+        }
+      ],
+      education: [
+        {
+          degree: "Computer Science / Software Engineering",
+          school: "Professional Experience"
         }
       ]
     },
@@ -940,7 +1174,66 @@
     });
   }
 
-  /* ---------- 12. project brief — opens a prefilled mailto ---------- */
+  /* ---------- 12. custom select dropdown ---------- */
+  (function () {
+    var wrap = $("#brief-need-wrap");
+    if (!wrap) return;
+    var btn = $("#brief-need-btn");
+    var val = $("#brief-need-val");
+    var menu = $("#brief-need-menu");
+    var hidden = $("#brief-need");
+    var items = menu.querySelectorAll("li");
+
+    val.classList.add("is-placeholder");
+    function toggle(open) {
+      var isOpen = typeof open === "boolean" ? open : !menu.classList.contains("is-open");
+      menu.classList.toggle("is-open", isOpen);
+      btn.setAttribute("aria-expanded", isOpen);
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggle();
+    });
+
+    items.forEach(function (li) {
+      li.addEventListener("click", function () {
+        items.forEach(function (el) { el.classList.remove("is-selected"); });
+        li.classList.add("is-selected");
+        val.textContent = li.dataset.value;
+        val.classList.remove("is-placeholder");
+        hidden.value = li.dataset.value;
+        toggle(false);
+      });
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!wrap.contains(e.target)) toggle(false);
+    });
+
+    btn.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") toggle(false);
+      if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle(true);
+        var first = menu.querySelector("li");
+        if (first) first.focus();
+      }
+    });
+    menu.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") { toggle(false); btn.focus(); }
+    });
+    items.forEach(function (li) {
+      li.setAttribute("tabindex", "0");
+      li.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); li.click(); btn.focus(); }
+        if (e.key === "ArrowDown" && li.nextElementSibling) { e.preventDefault(); li.nextElementSibling.focus(); }
+        if (e.key === "ArrowUp" && li.previousElementSibling) { e.preventDefault(); li.previousElementSibling.focus(); }
+      });
+    });
+  })();
+
+  /* ---------- 13. project brief — opens a prefilled mailto ---------- */
   var brief = $("#brief");
   var briefOk = $("#brief-ok");
   if (brief) {
@@ -959,7 +1252,7 @@
         "",
         message
       ].join("\n");
-      window.location.href = "mailto:hello@codemitytech.com?subject=" +
+      window.location.href = "mailto:info@codemitytech.com?subject=" +
         encodeURIComponent("Project brief — " + (need || "CodemityTech")) +
         "&body=" + encodeURIComponent(body);
       if (briefOk) briefOk.removeAttribute("hidden");
