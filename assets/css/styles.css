@@ -673,24 +673,9 @@ ul {
 }
 
 @media (max-width:1180px) {
-  .nav-list {
-    gap: 0
-  }
-
-  .nav-link {
-    padding: 9px 10px;
-    font-size: .86rem
-  }
-
-  .nav {
-    gap: 16px
-  }
-}
-
-@media (max-width:1060px) {
   .burger {
     display: grid;
-    margin-left: auto
+    margin-left: auto;
   }
 
   .nav {
@@ -703,38 +688,49 @@ ul {
     gap: 0;
     margin: 0;
     padding: 0 var(--pad);
+    height: 0;
     max-height: 0;
     overflow: hidden;
     visibility: hidden;
     background: var(--void);
     border-bottom: 1px solid var(--line-soft);
-    transition: max-height .45s var(--ease), visibility .45s
+    transition: height .4s var(--ease), visibility .4s;
+    z-index: 99;
   }
 
   .nav.open {
-    max-height: calc(100vh - 78px);
+    height: calc(100vh - 78px);
+    height: calc(100dvh - 78px);
+    max-height: none;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     visibility: visible;
-    padding-bottom: 26px
+    padding-bottom: 36px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: var(--void);
   }
 
   .nav-list {
     flex-direction: column;
     align-items: stretch;
-    padding: 12px 0
+    padding: 12px 0;
+    flex: 0 0 auto;
+    gap: 0;
   }
 
   .nav-link {
     padding: 14px 4px;
     font-size: 1rem;
     justify-content: space-between;
-    border-radius: 0
+    border-radius: 0;
   }
 
   .nav-link.active::after {
     left: 4px;
     right: auto;
-    width: 26px
+    width: 26px;
   }
 
   .drop {
@@ -750,24 +746,46 @@ ul {
     padding: 0 10px;
     overflow: hidden;
     border-color: transparent;
-    transition: max-height .4s var(--ease), padding .4s var(--ease)
+    transition: max-height .4s var(--ease), padding .4s var(--ease);
   }
 
   .nav-item.open .drop {
     max-height: 340px;
     padding: 10px;
-    border-color: var(--line)
+    border-color: var(--line);
   }
 
   .nav-tools {
-    padding: 6px 0 0;
-    justify-content: space-between
+    flex-shrink: 0;
+    margin-top: auto;
+    padding: 16px 0 6px;
+    border-top: 1px solid var(--line-soft);
+    justify-content: space-between;
+    gap: 14px;
   }
 
   .nav-tools .btn {
     flex: 1;
-    justify-content: center
+    justify-content: center;
   }
+}
+
+body.nav-open {
+  overflow: hidden;
+  touch-action: none;
+  height: 100vh;
+}
+
+body.nav-open .hdr {
+  background: var(--void);
+  backdrop-filter: none;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+body.nav-open .float {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* ---------- 4. hero ---------- */
@@ -1716,16 +1734,11 @@ body.loaded .stats {
   }
 
   .car-btn {
-    display: grid;
-    opacity: .9;
-    top: 50%;
-    translate: 0 -50%;
-    box-shadow: var(--shadow);
-    background: rgba(12, 8, 25, .8)
+    display: none !important;
   }
 
   .car-track {
-    scroll-snap-type: x proximity
+    scroll-snap-type: x mandatory;
   }
 }
 
@@ -2984,13 +2997,22 @@ body.lb-open {
 
 @media (max-width:520px) {
   .float {
-    right: 16px;
-    width: 46px;
-    height: 46px
+    right: 14px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .float .ic {
+    width: 20px;
+    height: 20px;
+  }
+
+  .wa {
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   }
 
   .to-top {
-    bottom: 80px
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -3658,6 +3680,7 @@ body.lb-open {
     display: grid;
     grid-template-columns: 1fr;
   }
+
   .pr-store-btn {
     width: 100%;
     justify-content: center;

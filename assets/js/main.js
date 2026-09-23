@@ -9,7 +9,7 @@
 
   var mq = window.matchMedia;
   var reduce = mq && mq("(prefers-reduced-motion:reduce)").matches;
-  var isMobileNav = function () { return mq && mq("(max-width:1060px)").matches; };
+  var isMobileNav = function () { return mq && mq("(max-width:1180px)").matches; };
   var $ = function (s, c) { return (c || document).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
 
@@ -61,6 +61,7 @@
   function setBurger(open) {
     if (!burger || !nav) return;
     nav.classList.toggle("open", open);
+    document.body.classList.toggle("nav-open", open);
     burger.setAttribute("aria-expanded", open ? "true" : "false");
     burger.setAttribute("aria-label", open ? "Close menu" : "Open menu");
     var use = burger.querySelector("use");
@@ -163,16 +164,48 @@
 
   /* ---------- 5. reveal on scroll ---------- */
   var revs = $$(".rv");
+  function checkReveal() {
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    revs.forEach(function (el) {
+      if (el.classList.contains("in")) return;
+      var rect = el.getBoundingClientRect();
+      if (rect.top <= vh + 80) {
+        el.classList.add("in");
+      }
+    });
+  }
+
   if (reduce || !("IntersectionObserver" in window)) {
     revs.forEach(function (el) { el.classList.add("in"); });
   } else {
     var ro = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting) { en.target.classList.add("in"); ro.unobserve(en.target); }
+        if (en.isIntersecting) {
+          en.target.classList.add("in");
+          ro.unobserve(en.target);
+        }
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -5% 0px" });
-    revs.forEach(function (el) { ro.observe(el); });
+    }, { threshold: 0, rootMargin: "0px 0px 80px 0px" });
+
+    revs.forEach(function (el) {
+      var rect = el.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.top <= vh) {
+        el.classList.add("in");
+      } else {
+        ro.observe(el);
+      }
+    });
   }
+
+  window.addEventListener("hashchange", checkReveal);
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if (a) {
+      setTimeout(checkReveal, 50);
+      setTimeout(checkReveal, 350);
+    }
+  });
 
   /* ---------- 6. stat count-up & hero interactions ---------- */
   var counters = $$("[data-count]");
@@ -180,32 +213,31 @@
     if (el.dataset.counted) return;
     el.dataset.counted = "true";
     var target = parseFloat(el.getAttribute("data-count"));
-    if (isNaN(target)) return;
-    if (reduce) { el.textContent = String(target); return; }
-    var dur = 1400, t0 = null;
+    if (isNaN(target) || reduce) return;
+    var dur = 800, t0 = null;
+    var startVal = Math.floor(target * 0.6); // Start close to final value so it never flashes low or broken
     function step(ts) {
       if (t0 === null) t0 = ts;
       var p = Math.min((ts - t0) / dur, 1);
-      el.textContent = String(Math.round((1 - Math.pow(1 - p, 3)) * target));
+      var ease = 1 - Math.pow(1 - p, 3);
+      el.textContent = String(Math.round(startVal + (target - startVal) * ease));
       if (p < 1) requestAnimationFrame(step);
     }
-    el.textContent = "0";
     requestAnimationFrame(step);
   }
 
-  // Count up hero stats right when hero entrance plays
   setTimeout(function () {
     $$(".hero .stat [data-count]").forEach(function (el) {
       countUp(el);
     });
-  }, 700);
+  }, 600);
 
   if (counters.length && "IntersectionObserver" in window) {
     var co = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
         if (en.isIntersecting) { countUp(en.target); co.unobserve(en.target); }
       });
-    }, { threshold: 0.2 });
+    }, { threshold: 0.1 });
     counters.forEach(function (el) { co.observe(el); });
   }
 
