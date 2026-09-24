@@ -226,12 +226,6 @@
     requestAnimationFrame(step);
   }
 
-  setTimeout(function () {
-    $$(".hero .stat [data-count]").forEach(function (el) {
-      countUp(el);
-    });
-  }, 600);
-
   if (counters.length && "IntersectionObserver" in window) {
     var co = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
@@ -239,6 +233,8 @@
       });
     }, { threshold: 0.1 });
     counters.forEach(function (el) { co.observe(el); });
+  } else {
+    counters.forEach(function (el) { countUp(el); });
   }
 
   /* ---------- 7. carousel engine (featured work & team slider) ---------- */
@@ -429,6 +425,12 @@
       return !s.closest("[hidden]") && !s.getAttribute("data-lb-solo");
     });
   }
+  function collectShotGroup(group) {
+    shots = $$("[data-lb]").filter(function (s) {
+      return !s.closest("[hidden]") && !s.getAttribute("data-lb-solo") &&
+        s.getAttribute("data-lb-group") === group;
+    });
+  }
   collectShots();
 
   function show(i) {
@@ -444,7 +446,9 @@
   }
   function openLb(s) {
     solo = !!s.getAttribute("data-lb-solo");
+    var group = s.getAttribute("data-lb-group");
     if (solo) shots = [s];
+    else if (group) collectShotGroup(group);
     else collectShots();
     var i = shots.indexOf(s);
     if (i < 0) return;
@@ -1258,4 +1262,108 @@
       if (briefOk) briefOk.removeAttribute("hidden");
     });
   }
+
+  /* ---------- DiDconn product carousel ---------- */
+  (function initDidconnCarousel() {
+    var carousel = $(".didconn-carousel");
+    if (!carousel) return;
+
+    var slides = $$(".didconn-slide", carousel);
+    var dots = $$(".didconn-dot", carousel);
+    var total = slides.length;
+    if (total < 2) return;
+
+    var current = 0;
+    var interval = null;
+    var DELAY = 3800; /* ms between auto-advances */
+    var paused = false;
+
+    function goTo(next) {
+      if (next === current) return;
+      var prev = current;
+
+      /* remove prev-out from any lingering slide */
+      slides.forEach(function (s) { s.classList.remove("prev-out"); });
+
+      /* animate outgoing slide */
+      slides[prev].classList.remove("active");
+      slides[prev].classList.add("prev-out");
+
+      /* animate incoming slide */
+      slides[next].classList.add("active");
+
+      /* update dots if present */
+      if (dots.length) {
+        dots.forEach(function (d, i) {
+          d.classList.toggle("active", i === next);
+          d.setAttribute("aria-selected", i === next ? "true" : "false");
+        });
+      }
+
+      current = next;
+
+      /* clean up prev-out after transition ends */
+      setTimeout(function () {
+        slides[prev].classList.remove("prev-out");
+      }, 750);
+    }
+
+    function advance() {
+      goTo((current + 1) % total);
+    }
+
+    function startAuto() {
+      if (interval) clearInterval(interval);
+      interval = setInterval(function () {
+        if (!paused) advance();
+      }, DELAY);
+    }
+
+    /* dot clicks if present */
+    if (dots.length) {
+      dots.forEach(function (dot, i) {
+        dot.addEventListener("click", function () {
+          goTo(i);
+          startAuto(); /* reset timer after manual navigation */
+        });
+      });
+    }
+
+    /* pause on hover (desktop) */
+    carousel.addEventListener("mouseenter", function () { paused = true; });
+    carousel.addEventListener("mouseleave", function () { paused = false; });
+
+    /* swipe support (mobile) */
+    var touchStartX = 0;
+    var touchEndX = 0;
+
+    carousel.addEventListener("touchstart", function (e) {
+      touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    carousel.addEventListener("touchend", function (e) {
+      touchEndX = e.changedTouches[0].screenX;
+      var diff = touchStartX - touchEndX;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+          goTo((current + 1) % total); /* swipe left → next */
+        } else {
+          goTo((current - 1 + total) % total); /* swipe right → prev */
+        }
+        startAuto();
+      }
+    }, { passive: true });
+
+    /* preload images */
+    slides.forEach(function (s) {
+      var img = s.querySelector("img");
+      if (img && img.dataset.src) {
+        img.src = img.dataset.src;
+      }
+    });
+
+    /* kick off */
+    if (!reduce) startAuto();
+  })();
+
 })();
