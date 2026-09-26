@@ -1009,6 +1009,12 @@ body.loaded .hero-btns {
   overflow: hidden
 }
 
+@media (min-width:1025px) {
+  .art-panel {
+    translate: 0 clamp(24px, 3vw, 42px)
+  }
+}
+
 .art-panel::before {
   /* hairline grid inside the panel */
   content: "";
@@ -3318,22 +3324,28 @@ body.lb-open {
   position: absolute;
   inset: 0;
   opacity: 0;
-  transform: translateX(30px);
-  transition: opacity .7s cubic-bezier(.4, 0, .2, 1), transform .7s cubic-bezier(.4, 0, .2, 1);
+  transform: translate3d(24px, 0, 0) scale(.985);
+  filter: blur(4px);
+  transition:
+    opacity .8s cubic-bezier(.22, .61, .36, 1),
+    transform .95s cubic-bezier(.22, .61, .36, 1),
+    filter .8s cubic-bezier(.22, .61, .36, 1);
   pointer-events: none;
   will-change: opacity, transform;
 }
 
 .didconn-slide.active {
   opacity: 1;
-  transform: translateX(0);
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
   pointer-events: auto;
   z-index: 2;
 }
 
 .didconn-slide.prev-out {
   opacity: 0;
-  transform: translateX(-30px);
+  transform: translate3d(-24px, 0, 0) scale(.985);
+  filter: blur(4px);
   z-index: 1;
 }
 

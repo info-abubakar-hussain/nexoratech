@@ -1277,6 +1277,8 @@
     var interval = null;
     var DELAY = 3800; /* ms between auto-advances */
     var paused = false;
+    var isVisible = false;
+    var firstAdvance = true;
 
     function goTo(next) {
       if (next === current) return;
@@ -1313,10 +1315,31 @@
     }
 
     function startAuto() {
-      if (interval) clearInterval(interval);
-      interval = setInterval(function () {
-        if (!paused) advance();
-      }, DELAY);
+      stopAuto();
+      if (reduce || !isVisible || paused) return;
+      if (firstAdvance) {
+        interval = setTimeout(function () {
+          interval = null;
+          if (paused || !isVisible) return;
+          advance();
+          firstAdvance = false;
+          interval = setInterval(function () {
+            if (!paused && isVisible) advance();
+          }, DELAY);
+        }, 2000);
+      } else {
+        interval = setInterval(function () {
+          if (!paused && isVisible) advance();
+        }, DELAY);
+      }
+    }
+
+    function stopAuto() {
+      if (interval) {
+        clearTimeout(interval);
+        clearInterval(interval);
+        interval = null;
+      }
     }
 
     /* dot clicks if present */
@@ -1331,7 +1354,10 @@
 
     /* pause on hover (desktop) */
     carousel.addEventListener("mouseenter", function () { paused = true; });
-    carousel.addEventListener("mouseleave", function () { paused = false; });
+    carousel.addEventListener("mouseleave", function () {
+      paused = false;
+      startAuto();
+    });
 
     /* swipe support (mobile) */
     var touchStartX = 0;
@@ -1362,8 +1388,20 @@
       }
     });
 
-    /* kick off */
-    if (!reduce) startAuto();
+    /* autoplay only while the carousel is actually in view */
+    if (!reduce && "IntersectionObserver" in window) {
+      var visibilityObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          isVisible = entry.isIntersecting;
+          if (isVisible) startAuto();
+          else stopAuto();
+        });
+      }, { threshold: 0.15 });
+      visibilityObserver.observe(carousel);
+    } else if (!reduce) {
+      isVisible = true;
+      startAuto();
+    }
   })();
 
 })();
